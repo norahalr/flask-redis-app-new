@@ -1,47 +1,32 @@
 pipeline {
-    agent none
+    agent any
     
+    environment {
+        // Use the full compose-prefixed names
+        REDIS_HOST = 'flask-redis-app-new-redis-1'
+        WEB_URL = 'http://flask-redis-app-new-web-1:5000'
+    }
+
     stages {
         stage('Checkout') {
-            agent any
             steps {
                 git branch: 'main', 
                      url: 'https://github.com/norahalr/flask-redis-app-new.git'
             }
         }
 
-        stage('Run Web App') {
-            agent {
-                docker {
-                    image 'python:3.9-slim'
-                    args '--network=host'  // No comments allowed in declarations
-                }
-            }
-            steps {
-                sh '''
-                    pip install -r requirements.txt
-                    python app.py &
-                    sleep 5
-                '''
-            }
-        }
-
         stage('Test Visits') {
-            agent any
             steps {
-                sh 'curl -s http://localhost:5000'
+                sh "curl -s ${WEB_URL}"
             }
         }
 
         stage('Clear Cache') {
-            agent {
-                docker {
-                    image 'redis:alpine'
-                    args '--network host'
-                }
-            }
             steps {
-                sh 'redis-cli -h localhost DEL visits'
+                sh '''
+                    docker exec ${REDIS_HOST} redis-cli DEL visits
+                    echo "Cache cleared successfully"
+                '''
             }
         }
     }
