@@ -14,7 +14,7 @@ pipeline {
             agent {
                 docker {
                     image 'python:3.9-slim'
-                    args '--network host'  # Use host network for simplicity
+                    args '--network=host'  // No comments allowed in declarations
                 }
             }
             steps {
