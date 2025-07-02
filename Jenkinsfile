@@ -6,7 +6,7 @@ pipeline {
             agent any
             steps {
                 git branch: 'main', 
-                     url: 'https://github.com/norahalr/flask-redis-app.git'
+                     url: 'https://github.com/norahalr/flask-redis-app-new.git'
             }
         }
 
