@@ -23,12 +23,19 @@ pipeline {
         stage('Clear Cache') {
             steps {
                 script {
-                    // Using printf for proper Redis protocol formatting
+                    // Install netcat if missing (will cache the installation)
                     sh '''
-                        (printf "*1\r\n\$3\r\nDEL\r\n\$6\r\nvisits\r\n"; sleep 1) | \
-                        nc -w 1 ${REDIS_HOST} 6379 2>/dev/null || \
-                        echo "Cache clear attempted (verify Redis connection)"
-                        echo "Visit counter should be reset"
+                        if ! command -v nc >/dev/null 2>&1; then
+                            apt-get update && apt-get install -y netcat-openbsd
+                        fi
+                    '''
+                    
+                    // Proper Redis protocol command
+                    sh '''
+                        (printf "*2\r\n\$3\r\nDEL\r\n\$6\r\nvisits\r\n"; sleep 1) | \
+                        nc -w 2 ${REDIS_HOST} 6379 && \
+                        echo "Cache cleared successfully" || \
+                        echo "Cache clear failed - check Redis connection"
                     '''
                 }
             }
