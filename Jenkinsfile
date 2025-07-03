@@ -23,17 +23,14 @@ pipeline {
         stage('Clear Cache') {
             steps {
                 script {
-                    // Using Python's built-in socket module
-                    sh """
-                        python -c \"
-                        import socket
-                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        s.connect(('${env.REDIS_HOST}', 6379))
-                        s.sendall(b'DEL visits\\r\\n')
-                        print(s.recv(1024).decode())
-                        s.close()
-                        \"
-                    """
+                    // Using bash built-ins and /dev/tcp
+                    sh '''
+                        exec 3<>/dev/tcp/${REDIS_HOST}/6379
+                        echo -e "DEL visits\r\n" >&3
+                        cat <&3
+                        exec 3>&-
+                        echo "Cache cleared successfully"
+                    '''
                 }
             }
         }
