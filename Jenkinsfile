@@ -23,10 +23,17 @@ pipeline {
 
         stage('Clear Cache') {
             steps {
-                sh '''
-                    docker exec ${REDIS_HOST} redis-cli DEL visits
-                    echo "Cache cleared successfully"
-                '''
+                script {
+                    def result = sh(script: 'nc -zv flask-redis-app-new-redis-1 6379', returnStatus: true)
+                    if (result == 0) {
+                        sh '''
+                            printf "DEL visits\n" | nc flask-redis-app-new-redis-1 6379
+                            echo "Cache cleared via direct Redis connection"
+                        '''
+                    } else {
+                        error "Cannot connect to Redis"
+                    }
+                }
             }
         }
     }
