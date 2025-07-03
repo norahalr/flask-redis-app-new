@@ -23,20 +23,20 @@ pipeline {
         stage('Clear Cache') {
             steps {
                 script {
-                    // Install netcat if missing (will cache the installation)
-                    sh '''
-                        if ! command -v nc >/dev/null 2>&1; then
-                            apt-get update && apt-get install -y netcat-openbsd
-                        fi
-                    '''
-                    
-                    // Proper Redis protocol command
-                    sh '''
-                        (printf "*2\r\n\$3\r\nDEL\r\n\$6\r\nvisits\r\n"; sleep 1) | \
-                        nc -w 2 ${REDIS_HOST} 6379 && \
-                        echo "Cache cleared successfully" || \
-                        echo "Cache clear failed - check Redis connection"
-                    '''
+                    // Try to use netcat if available, otherwise use redis-cli from the redis container
+                    try {
+                        sh '''
+                            (printf "*2\r\n\$3\r\nDEL\r\n\$6\r\nvisits\r\n"; sleep 1) | \
+                            nc -w 2 ${REDIS_HOST} 6379 && \
+                            echo "Cache cleared successfully" || \
+                            echo "Cache clear failed - check Redis connection"
+                        '''
+                    } catch (Exception e) {
+                        echo "Netcat approach failed, trying redis-cli alternative"
+                        // Execute redis-cli inside the redis container
+                        sh "docker exec flask-redis-app-new-redis-1 redis-cli DEL visits"
+                        echo "Cache cleared via redis-cli"
+                    }
                 }
             }
         }
