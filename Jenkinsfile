@@ -2,7 +2,6 @@ pipeline {
     agent any
     
     environment {
-        // Use the full compose-prefixed names
         REDIS_HOST = 'flask-redis-app-new-redis-1'
         WEB_URL = 'http://flask-redis-app-new-web-1:5000'
     }
@@ -24,15 +23,17 @@ pipeline {
         stage('Clear Cache') {
             steps {
                 script {
-                    def result = sh(script: 'nc -zv flask-redis-app-new-redis-1 6379', returnStatus: true)
-                    if (result == 0) {
-                        sh '''
-                            printf "DEL visits\n" | nc flask-redis-app-new-redis-1 6379
-                            echo "Cache cleared via direct Redis connection"
-                        '''
-                    } else {
-                        error "Cannot connect to Redis"
-                    }
+                    // Using Python's built-in socket module
+                    sh """
+                        python -c \"
+                        import socket
+                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        s.connect(('${env.REDIS_HOST}', 6379))
+                        s.sendall(b'DEL visits\\r\\n')
+                        print(s.recv(1024).decode())
+                        s.close()
+                        \"
+                    """
                 }
             }
         }
