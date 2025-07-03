@@ -1,11 +1,11 @@
 pipeline {
     agent {
         docker {
-            image 'alpine:latest'  // Small (~5MB) and has netcat
-            args '--network host'  // Ensures network access to other containers
+            image 'norahns/jenkins-nc-alpine'  // Your custom image
+            args '--network host'  // Connect to your Redis/Flask containers
         }
     }
-    
+
     environment {
         REDIS_HOST = 'flask-redis-app-new-redis-1'
         WEB_URL = 'http://flask-redis-app-new-web-1:5000'
