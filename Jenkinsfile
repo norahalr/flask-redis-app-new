@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'alpine:latest'  // Small (~5MB) and has netcat
+            args '--network host'  // Ensures network access to other containers
+        }
+    }
     
     environment {
         REDIS_HOST = 'flask-redis-app-new-redis-1'
@@ -22,22 +27,12 @@ pipeline {
 
         stage('Clear Cache') {
             steps {
-                script {
-                    // Try to use netcat if available, otherwise use redis-cli from the redis container
-                    try {
-                        sh '''
-                            (printf "*2\r\n\$3\r\nDEL\r\n\$6\r\nvisits\r\n"; sleep 1) | \
-                            nc -w 2 ${REDIS_HOST} 6379 && \
-                            echo "Cache cleared successfully" || \
-                            echo "Cache clear failed - check Redis connection"
-                        '''
-                    } catch (Exception e) {
-                        echo "Netcat approach failed, trying redis-cli alternative"
-                        // Execute redis-cli inside the redis container
-                        sh "docker exec flask-redis-app-new-redis-1 redis-cli DEL visits"
-                        echo "Cache cleared via redis-cli"
-                    }
-                }
+                sh '''
+                    (printf "*2\r\n\$3\r\nDEL\r\n\$6\r\nvisits\r\n"; sleep 1) | \
+                    nc -w 2 ${REDIS_HOST} 6379 && \
+                    echo "Cache cleared successfully" || \
+                    echo "Cache clear failed - check Redis connection"
+                '''
             }
         }
     }
